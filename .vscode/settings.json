@@ -2,10 +2,15 @@
     "jupyter.jupyterServerType": "local",
     "cSpell.words": [
         "cmap",
+        "facecolor",
+        "figheight",
+        "figsize",
+        "figwidth",
         "getpixel",
         "imshow",
         "mpmath",
         "pyplot",
-        "seaborn"
+        "seaborn",
+        "sharey"
     ]
 }
