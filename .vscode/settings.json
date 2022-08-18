@@ -7,8 +7,10 @@
         "figsize",
         "figwidth",
         "getpixel",
+        "histplot",
         "imshow",
         "mpmath",
+        "prewitt",
         "pyplot",
         "seaborn",
         "sharey"
