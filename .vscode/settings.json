@@ -1,18 +1,35 @@
 {
     "jupyter.jupyterServerType": "local",
     "cSpell.words": [
+        "arange",
         "cmap",
+        "coeff",
+        "dtype",
         "facecolor",
         "figheight",
         "figsize",
         "figwidth",
+        "fromfunction",
         "getpixel",
         "histplot",
+        "imread",
         "imshow",
+        "kmeans",
+        "ksize",
         "mpmath",
         "prewitt",
         "pyplot",
+        "resp",
         "seaborn",
         "sharey"
-    ]
+    ],
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/.venv": true
+    }
 }
