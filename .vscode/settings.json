@@ -2,26 +2,35 @@
     "jupyter.jupyterServerType": "local",
     "cSpell.words": [
         "arange",
+        "astype",
         "cmap",
         "coeff",
+        "cumsum",
         "dtype",
         "facecolor",
         "figheight",
         "figsize",
         "figwidth",
+        "fontsize",
         "fromfunction",
         "getpixel",
+        "grayscales",
         "histplot",
+        "hsvs",
         "imread",
         "imshow",
         "kmeans",
         "ksize",
         "mpmath",
+        "nonzero",
         "prewitt",
         "pyplot",
         "resp",
         "seaborn",
-        "sharey"
+        "sharey",
+        "sklearn",
+        "xaxis",
+        "yaxis"
     ],
     "files.exclude": {
         "**/.git": true,
@@ -31,5 +40,6 @@
         "**/.DS_Store": true,
         "**/Thumbs.db": true,
         "**/.venv": true
-    }
+    },
+    "editor.formatOnSave": true
 }
