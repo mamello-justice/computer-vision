@@ -29,6 +29,8 @@
         "seaborn",
         "sharey",
         "sklearn",
+        "sobel",
+        "thresholding",
         "xaxis",
         "yaxis"
     ],
