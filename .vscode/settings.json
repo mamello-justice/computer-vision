@@ -2,6 +2,8 @@
     "jupyter.jupyterServerType": "local",
     "cSpell.words": [
         "arange",
+        "argmax",
+        "argsort",
         "argwhere",
         "astype",
         "cmap",
