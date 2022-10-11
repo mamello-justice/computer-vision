@@ -1,0 +1,10 @@
+{
+    "jupyter.jupyterServerType": "local",
+    "cSpell.words": [
+        "dtype",
+        "figsize",
+        "imread",
+        "imshow",
+        "pyplot"
+    ]
+}

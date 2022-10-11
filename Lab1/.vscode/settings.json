@@ -1,0 +1,28 @@
+{
+    "editor.formatOnSave": true,
+    "jupyter.jupyterServerType": "local",
+    "cSpell.words": [
+        "astype",
+        "cmap",
+        "cumsum",
+        "dtype",
+        "figheight",
+        "figsize",
+        "figwidth",
+        "fontsize",
+        "grayscales",
+        "histplot",
+        "hsvs",
+        "imread",
+        "imshow",
+        "nonzero",
+        "prewitt",
+        "pyplot",
+        "rgbs",
+        "seaborn",
+        "sharey",
+        "sklearn",
+        "xaxis",
+        "yaxis"
+    ]
+}

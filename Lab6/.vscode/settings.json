@@ -1,0 +1,18 @@
+{
+    "editor.formatOnSave": true,
+    "jupyter.jupyterServerType": "remote",
+    "cSpell.words": [
+        "astype",
+        "dtype",
+        "figsize",
+        "imageio",
+        "imread",
+        "imshow",
+        "ipath",
+        "mpath",
+        "msks",
+        "natsort",
+        "natsorted",
+        "pyplot"
+    ]
+}
