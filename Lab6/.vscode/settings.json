@@ -9,6 +9,7 @@
         "cumsum",
         "dtype",
         "figsize",
+        "fontsize",
         "hsplit",
         "hstack",
         "imageio",
@@ -29,6 +30,8 @@
         "nonzero",
         "polylines",
         "pyplot",
-        "sklearn"
+        "sklearn",
+        "xaxis",
+        "yaxis"
     ]
 }
