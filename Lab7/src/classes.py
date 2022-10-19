@@ -185,6 +185,8 @@ class Piece:
                           self.bottom_edge, self.right_edge, None]
 
     def insert(self):  # Inserts the piece into the canvas using an affine transformation
+        global canvas
+        canvas_h, canvas_w, canvas_c = canvas.shape
         print("Inserting piece: ", self.idx)
 
         # 1.1 Piece type
@@ -219,23 +221,22 @@ class Piece:
 
             # (x, y) coordinates of destination
             pts_dst = np.array([
-                np.array([0, 0]),
-                # Left edge (0, length of y)
-                np.array([0, np.abs(pts_src[0, 1] - pts_src[1, 1])]),
-                # Bottom edge (length of x, 0)
-                np.array([np.abs(pts_src[0, 0] - pts_src[2, 0]), 0])
+                np.array([0, canvas_h]),
+                np.array([0, canvas_h - np.abs(pts_src[0, 1] - pts_src[1, 1])]),
+                np.array([np.abs(pts_src[0, 0] - pts_src[2, 0]), canvas_h])
             ], dtype=np.float32)
 
             M = cv2.getAffineTransform(pts_src, pts_dst)
 
             # (length of x, length of y)
-            dsize = (self.image.shape[1], self.image.shape[0])
+            dsize = (canvas_w, canvas_h)
             self.dst = cv2.warpAffine(self.image, M, dsize)
             self.mask = cv2.warpAffine(self.mask, M, dsize)
 
             self.update_edges(M)
 
-            canvas = self.mask * self.dst + (1-self.mask) * canvas
+            mask = np.expand_dims(self.mask, -1)
+            canvas = mask * self.dst + (1-mask) * canvas
 
 
 class Puzzle(object):
