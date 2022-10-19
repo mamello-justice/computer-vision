@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn
 import networkx as nx
+from enum import Enum
 
 import sklearn.neighbors
 
@@ -57,6 +58,12 @@ MATCH_CORNERS = DATA_CORNERS
 
 print('\n', DATA_IMGS[0].shape, '->', MATCH_IMGS[0].shape)
 
+
+class PieceType(Enum):
+    CORNER = 0
+    EDGE = 1
+    INTERIOR = 2
+
 ################################################ Define our three classes #############################################
 
 
@@ -68,6 +75,9 @@ class Edge:
         self.point2 = point2
         self.connected_edge = None
         self.is_flat = None
+
+    def __repr__(self):
+        return 'Edge(%s, %s, %s, %s)' % (self.point1, self.point2, self.parent_piece.idx, self.is_flat)
 
     def info(self):
         print("Point 1: ", self.point1)
@@ -175,8 +185,57 @@ class Piece:
                           self.bottom_edge, self.right_edge, None]
 
     def insert(self):  # Inserts the piece into the canvas using an affine transformation
-        # TODO: Implement this function
         print("Inserting piece: ", self.idx)
+
+        # 1.1 Piece type
+        count = 0
+
+        for edge in self.edge_list:
+            adjacent_piece_connected = edge is not None\
+                and not edge.is_flat\
+                and edge.connected_edge.parent_piece.inserted == True
+            if adjacent_piece_connected:
+                count += 1
+
+        assert count <= 2, "Cannot have more than 2 occurrences of inserted adjacencies"
+
+        self.piece_type = PieceType(count)
+
+        # 1.2. Insert
+        if self.piece_type == PieceType.CORNER:
+            flat_edges = [
+                edge for edge in self.edge_list if edge is not None and edge.is_flat]
+
+            first_edge, second_edge = flat_edges
+            if np.any(first_edge.point2 != second_edge.point1):
+                first_edge, second_edge = second_edge, first_edge
+
+            # (x, y) coordinates of source
+            pts_src = np.array([
+                first_edge.point2[::-1],
+                first_edge.point1[::-1],
+                second_edge.point2[::-1]
+            ], dtype=np.float32)
+
+            # (x, y) coordinates of destination
+            pts_dst = np.array([
+                np.array([0, 0]),
+                # Left edge (0, length of y)
+                np.array([0, np.abs(pts_src[0, 1] - pts_src[1, 1])]),
+                # Bottom edge (length of x, 0)
+                np.array([np.abs(pts_src[0, 0] - pts_src[2, 0]), 0])
+            ], dtype=np.float32)
+
+            M = cv2.getAffineTransform(pts_src, pts_dst)
+
+            # (length of x, length of y)
+            dsize = (self.image.shape[1], self.image.shape[0])
+            self.dst = cv2.warpAffine(self.image, M, dsize)
+            self.mask = cv2.warpAffine(self.mask, M, dsize)
+
+            self.update_edges(M)
+
+            canvas = self.mask * self.dst + (1-self.mask) * canvas
 
 
 class Puzzle(object):

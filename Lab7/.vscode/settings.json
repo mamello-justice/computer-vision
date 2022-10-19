@@ -5,6 +5,8 @@
         "argsort",
         "astype",
         "cachier",
+        "dsize",
+        "dtype",
         "imageio",
         "imread",
         "imshow",
