@@ -10,4 +10,23 @@ if __name__ == '__main__':
     corner_piece.insert()
     corner_piece.inserted = True
 
-    # TODO: Rest of BFS
+    while queue:
+        source = queue.pop(0)
+
+        for edge in source.edge_list:
+            if edge is None:
+                continue
+
+            connected_edge = edge.connected_edge
+            if connected_edge is None:
+                continue
+
+            parent_piece = connected_edge.parent_piece
+            if parent_piece.inserted:
+                continue
+
+            queue.append(parent_piece)
+            parent_piece.insert()
+            parent_piece.inserted = True
+
+    puzzle.display()
