@@ -77,7 +77,21 @@ class Edge:
         self.is_flat = None
 
     def __repr__(self):
-        return 'Edge(%s, %s, %s, %s)' % (self.point1, self.point2, self.parent_piece.idx, self.is_flat)
+        idx = self.parent_piece.idx
+        sibling_idx = None if self.connected_edge is None else self.connected_edge.parent_piece.idx
+        point1 = "{ x: %.2f, y: %.2f }" % (self.point1[1], self.point1[0])
+        point2 = "{ x: %.2f, y: %.2f }" % (self.point2[1], self.point2[0])
+        flat = ', Flat' if self.is_flat else ''
+
+        return 'Edge(1: %s, 2: %s, %s<->%s%s)' % (point1, point2, idx, sibling_idx, flat)
+
+    def points(self, xy=False):
+        point1 = self.point1[::-1] if xy else self.point1
+        point2 = self.point2[::-1] if xy else self.point2
+        return np.array([point1, point2], dtype=np.float32)
+
+    def norm(self):
+        return np.linalg.norm(self.point1 - self.point2)
 
     def info(self):
         print("Point 1: ", self.point1)
@@ -114,6 +128,10 @@ class Piece:
         self.find_corners()
         self.find_edges()
 
+    def __repr__(self):
+        inserted_text = ", Inserted" if self.inserted else ""
+        return 'Piece(%d, %s%s)' % (self.idx, self.piece_type, inserted_text)
+
     def return_edge(self):  # generator which can be used to loop through edges in the BFS
         while True:
             for edge in self.edge_list:
@@ -141,8 +159,29 @@ class Piece:
         self.right_edge.info()
 
     def update_edges(self, transform):
-        # TODO: Update the corner and edge information of the puzzle piece
-        raise Exception()
+        # Transform corners
+        xy_corners = self.corners[:, ::-1]
+        xy_corners_stacked = np.hstack((
+            xy_corners,
+            np.ones((len(xy_corners), 1))))
+        xy_corners_new = np.dot(xy_corners_stacked, transform.T)
+        self.corners = xy_corners_new[:, ::-1]
+
+        # Transform edges
+        for edge in self.edge_list:
+            if edge is None:
+                continue
+
+            # (x, y) coordinates of points
+            edge_points = edge.points(xy=True)
+
+            point1 = np.append(edge_points[0], [1])
+            transformed_point1 = np.dot(point1, transform.T)
+            edge.point1 = transformed_point1[::-1]  # (y, x) coordinates
+
+            point2 = np.append(edge_points[1], [1])
+            transformed_point2 = np.dot(point2, transform.T)
+            edge.point2 = transformed_point2[::-1]  # (y, x) coordinates
 
     def extract_features(self):
         # Function which will extract all the necessary features to classify pixels
@@ -184,59 +223,190 @@ class Piece:
         self.edge_list = [self.top_edge, self.left_edge,
                           self.bottom_edge, self.right_edge, None]
 
+    def _insert_corner(self):
+        global canvas
+        canvas_h = canvas.shape[0]
+
+        flat_edges = [
+            edge for edge in self.edge_list if edge is not None and edge.is_flat]
+
+        first_edge, second_edge = flat_edges
+        if np.any(first_edge.point2 != second_edge.point1):
+            first_edge, second_edge = second_edge, first_edge
+
+        pts_src = np.empty((0, 2), dtype=np.float32)
+        pts_dst = np.empty((0, 2), dtype=np.float32)
+
+        # (x, y) coordinates of source
+        pts_src = np.append(pts_src, [
+            first_edge.point2[::-1],
+            first_edge.point1[::-1],
+            second_edge.point2[::-1]
+        ], axis=0).astype(np.float32)
+
+        # (x, y) coordinates of destination
+        pts_dst = np.append(pts_dst, [
+            [0, canvas_h],
+            [0, canvas_h - np.abs(pts_src[0, 1] - pts_src[1, 1])],
+            [np.abs(pts_src[0, 0] - pts_src[2, 0]), canvas_h]
+        ], axis=0).astype(np.float32)
+
+        return pts_src, pts_dst
+
+    def _insert_edge(self):
+        third_edge = None
+
+        for edge in self.edge_list:
+            connected_piece_inserted = edge is not None\
+                and edge.connected_edge is not None\
+                and edge.connected_edge.parent_piece.inserted == True
+            if connected_piece_inserted:
+                third_edge = edge
+                break
+
+        assert third_edge is not None, "didn't find any edge for %d with a matching connected piece" % self.idx
+
+        pts_src = np.empty((0, 2), dtype=np.float32)
+        pts_dst = np.empty((0, 2), dtype=np.float32)
+
+        org_norm = third_edge.norm()
+        # (x, y) coordinates of source (connected)
+        third_edge_points = third_edge.points(xy=True)
+        pts_src = np.append(pts_src, third_edge_points, axis=0)
+
+        canvas_norm = third_edge.connected_edge.norm()
+        # (x, y) coordinates of destination (connected)
+        third_edge_connected_points = \
+            third_edge.connected_edge.points(xy=True)
+        pts_dst = np.append(
+            pts_dst, third_edge_connected_points[::-1, :], axis=0)
+
+        # Scale factor
+        ratio = org_norm / canvas_norm
+
+        # Bottom edge piece
+        if (pts_dst[0, 0] - pts_dst[1, 0]) > (pts_dst[0, 1] - pts_dst[1, 1]):
+            for edge in self.edge_list:
+                anti_clockwise_edge_three = edge is not None\
+                    and np.all(third_edge.point2 == edge.point1)
+                if anti_clockwise_edge_three:
+                    fourth_edge = edge
+                    break
+
+            assert fourth_edge is not None, "didn't find any edge anti-clockwise to third_edge for %d" % self.idx
+
+            # (x, y) coordinates of source (other point of flat)
+            fourth_edge_points = fourth_edge.points(xy=True)
+            pts_src = np.append(
+                pts_src,
+                fourth_edge_points[1:],
+                axis=0)
+
+            edge_norm = fourth_edge.norm()
+            x_value = pts_dst[1, 0] + int(ratio * edge_norm)
+            y_value = pts_dst[1, 1]
+            pts_dst = np.append(
+                pts_dst,
+                [[x_value, y_value]],
+                axis=0).astype(np.float32)
+
+        # Left edge piece
+        else:
+            for edge in self.edge_list:
+                anti_clockwise_before_edge_three = edge is not None\
+                    and np.all(edge.point2 == third_edge.point1)
+                if anti_clockwise_before_edge_three:
+                    fifth_edge = edge
+                    break
+
+            assert fifth_edge is not None, "didn't find any edge before third_edge (anti-clockwise) for %d" % self.idx
+
+            fifth_edge_points = fifth_edge.points(xy=True)
+            pts_src = np.append(
+                pts_src, fifth_edge_points[:1], axis=0)
+
+            edge_norm = fifth_edge.norm()
+            x_value = pts_dst[0, 0]
+            y_value = pts_dst[0, 1] - int(ratio * edge_norm)
+            pts_dst = np.append(
+                pts_dst,
+                [[x_value, y_value]],
+                axis=0).astype(np.float32)
+
+        return pts_src, pts_dst
+
+    def _insert_interior(self):
+        pts_src = np.empty((0, 2), dtype=np.float32)
+        pts_dst = np.empty((0, 2), dtype=np.float32)
+
+        for edge in self.edge_list:
+            connected_piece_inserted = edge is not None\
+                and edge.connected_edge is not None\
+                and edge.connected_edge.parent_piece.inserted == True
+            if not connected_piece_inserted:
+                continue
+
+            edge_points = edge.points(xy=True)
+            connected_points = edge.connected_edge.points(xy=True)
+
+            if edge_points[0] not in pts_src:
+                pts_src = np.append(pts_src, edge_points[:1], axis=0)
+                pts_dst = np.append(
+                    pts_dst, connected_points[1:], axis=0)
+
+            if edge_points[1] not in pts_src:
+                pts_src = np.append(pts_src, edge_points[1:], axis=0)
+                pts_dst = np.append(
+                    pts_dst, connected_points[:1], axis=0)
+
+        return pts_src, pts_dst
+
     def insert(self):  # Inserts the piece into the canvas using an affine transformation
         global canvas
         canvas_h, canvas_w, canvas_c = canvas.shape
         print("Inserting piece: ", self.idx)
 
-        # 1.1 Piece type
         count = 0
 
         for edge in self.edge_list:
-            adjacent_piece_connected = edge is not None\
+            connected_piece_inserted = edge is not None\
                 and not edge.is_flat\
                 and edge.connected_edge.parent_piece.inserted == True
-            if adjacent_piece_connected:
+            if connected_piece_inserted:
                 count += 1
 
         assert count <= 2, "Cannot have more than 2 occurrences of inserted adjacencies"
 
         self.piece_type = PieceType(count)
 
-        # 1.2. Insert
         if self.piece_type == PieceType.CORNER:
-            flat_edges = [
-                edge for edge in self.edge_list if edge is not None and edge.is_flat]
+            pts_src, pts_dst = self._insert_corner()
 
-            first_edge, second_edge = flat_edges
-            if np.any(first_edge.point2 != second_edge.point1):
-                first_edge, second_edge = second_edge, first_edge
+        elif self.piece_type == PieceType.EDGE:
+            pts_src, pts_dst = self._insert_edge()
 
-            # (x, y) coordinates of source
-            pts_src = np.array([
-                first_edge.point2[::-1],
-                first_edge.point1[::-1],
-                second_edge.point2[::-1]
-            ], dtype=np.float32)
+        elif self.piece_type == PieceType.INTERIOR:
+            pts_src, pts_dst = self._insert_interior()
 
-            # (x, y) coordinates of destination
-            pts_dst = np.array([
-                np.array([0, canvas_h]),
-                np.array([0, canvas_h - np.abs(pts_src[0, 1] - pts_src[1, 1])]),
-                np.array([np.abs(pts_src[0, 0] - pts_src[2, 0]), canvas_h])
-            ], dtype=np.float32)
+        else:
+            raise Exception("Unknown piece type for %s: %s" %
+                            self.idx,  self.piece_type)
 
-            M = cv2.getAffineTransform(pts_src, pts_dst)
+        size = "more" if len(pts_src) > 3 else "less"
+        assert len(pts_src) == len(pts_dst) == 3,\
+            f"found {size} ({len(pts_src)}) than 3 points in {self.idx}"
 
-            # (length of x, length of y)
-            dsize = (canvas_w, canvas_h)
-            self.dst = cv2.warpAffine(self.image, M, dsize)
-            self.mask = cv2.warpAffine(self.mask, M, dsize)
+        M = cv2.getAffineTransform(pts_src, pts_dst)
 
-            self.update_edges(M)
+        # (length of x, length of y)
+        dsize = (canvas_w, canvas_h)
+        self.dst = cv2.warpAffine(self.image, M, dsize)
+        self.mask = cv2.warpAffine(self.mask, M, dsize)
 
-            mask = np.expand_dims(self.mask, -1)
-            canvas = mask * self.dst + (1-mask) * canvas
+        self.update_edges(M)
+
+        mask = np.expand_dims(self.mask, -1)
+        canvas = mask * self.dst + (1-mask) * canvas
 
 
 class Puzzle(object):
@@ -422,6 +592,13 @@ class Puzzle(object):
                                                                              [0]].edge_list[connections[i, j][1]]
                 else:
                     self.pieces[i].edge_list[j].is_flat = True
+
+    def display(self):
+        global canvas
+
+        plt.imshow(canvas)
+        plt.show()
+        plt.close()
 
 
 # Create our canvas with the necessary size
