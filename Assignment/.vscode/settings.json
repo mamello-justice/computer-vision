@@ -1,0 +1,19 @@
+{
+    "editor.formatOnSave": true,
+    "editor.rulers": [80, 120],
+    "jupyter.jupyterServerType": "local",
+    "cSpell.words": [
+        "cmap",
+        "crossentropy",
+        "imageio",
+        "imagenet",
+        "imread",
+        "imshow",
+        "keras",
+        "natsort",
+        "natsorted",
+        "pyplot",
+        "tqdm",
+        "unet"
+    ]
+}
