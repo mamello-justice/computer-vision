@@ -171,3 +171,5 @@ assets/*
 data/*
 !data/.gitkeep
 !data/*.h5
+
+.comet.config

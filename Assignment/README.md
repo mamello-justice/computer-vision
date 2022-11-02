@@ -1,6 +1,6 @@
 # Computer Vision
 
-## Gaussian Mixture Models (GMM)
+## Gaussian Mixture Models (GMM) & Deep Learning
 
 ### Requirements
 

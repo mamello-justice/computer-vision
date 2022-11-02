@@ -12,8 +12,15 @@
         "keras",
         "natsort",
         "natsorted",
+        "pyenv",
         "pyplot",
+        "Seaborn",
+        "tensorboard",
+        "tensorflow",
+        "thresholding",
         "tqdm",
-        "unet"
-    ]
+        "unet",
+        "virtualenv"
+    ],
+    "python.analysis.typeCheckingMode": "basic"
 }
