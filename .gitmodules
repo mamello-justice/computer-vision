@@ -1,0 +1,3 @@
+[submodule "Assignment"]
+	path = Assignment
+	url = git@github.com:mamello-justice/cv_gmm_deep.git
